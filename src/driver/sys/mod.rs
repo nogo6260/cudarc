@@ -35,5 +35,10 @@ pub use sys_12040::*;
 
 pub unsafe fn lib() -> &'static Lib {
     static LIB: std::sync::OnceLock<Lib> = std::sync::OnceLock::new();
-    LIB.get_or_init(|| Lib::new(libloading::library_filename("cuda")).unwrap())
+    LIB.get_or_init(|| {
+        Lib::new(libloading::library_filename("cuda"))
+            // checking for nvcuda in case of error on windows. See issue #219.
+            .or_else(|e| Lib::new(libloading::library_filename("nvcuda")))
+            .unwrap()
+    })
 }
