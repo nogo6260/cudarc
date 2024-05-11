@@ -91,11 +91,12 @@ pub mod device {
     //!
     //! See [cuda docs](https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__DEVICE.html#group__CUDA__DEVICE)
 
+    use std::vec::Vec;
     use super::{
         sys::{self, lib},
         DriverError,
     };
-    use core::ffi::c_int;
+    use core::ffi::{c_char, c_int};
     use std::mem::MaybeUninit;
 
     /// Get a device for a specific ordinal.
@@ -148,6 +149,18 @@ pub mod device {
             .result()?;
         Ok(value.assume_init())
     }
+
+    /// Get an device name.
+    ///
+    /// See [cuda docs](https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__DEVICE.html#group__CUDA__DEVICE_1gef75aa30df95446a845f2a7b9fffbb7f)
+    ///
+    /// # Safety
+    /// Must be a device returned from [get].
+    pub unsafe fn get_name(dev: sys::CUdevice) -> Result<Vec<c_char>, DriverError> {
+        let mut name:Vec<c_char> = Vec::with_capacity(100);
+        lib().cuDeviceGetName(name.as_mut_ptr(), 100, dev).result()?;
+        Ok(name)
+    }
 }
 
 pub mod function {
@@ -173,7 +186,6 @@ pub mod function {
 }
 
 pub mod occupancy {
-
     use core::{
         ffi::{c_int, c_uint},
         mem::MaybeUninit,
@@ -793,27 +805,27 @@ pub mod module {
     }
 
     /// Returns in *dptr and *bytes the base pointer and size of the global of name name located in module module
-    /// 
+    ///
     /// See [cuda docs](https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__MODULE.html#group__CUDA__MODULE_1gf3e43672e26073b1081476dbf47a86ab)
     /// # Safety
     pub unsafe fn get_symbol_ptr(
-        module: sys::CUmodule, 
-        name: CString
+        module: sys::CUmodule,
+        name: CString,
     ) -> Result<(sys::CUdeviceptr, usize), DriverError> {
         let mut dev_ptr = MaybeUninit::uninit();
         let mut size = MaybeUninit::uninit();
         let name_ptr = name.as_c_str().as_ptr();
         lib()
-        .cuModuleGetGlobal_v2(
-            dev_ptr.as_mut_ptr(), 
-            size.as_mut_ptr(), 
-            module, 
-            name_ptr
-        )
-        .result()?;
+            .cuModuleGetGlobal_v2(
+                dev_ptr.as_mut_ptr(),
+                size.as_mut_ptr(),
+                module,
+                name_ptr,
+            )
+            .result()?;
         Ok((dev_ptr.assume_init(), size.assume_init()))
     }
-    
+
 
     /// Unloads a module.
     ///

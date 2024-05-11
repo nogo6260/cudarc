@@ -1,3 +1,4 @@
+use core::ffi::CStr;
 use crate::driver::{
     result,
     sys::{self, lib, CUfunction_attribute_enum},
@@ -170,6 +171,15 @@ impl CudaDevice {
     pub fn attribute(&self, attrib: sys::CUdevice_attribute) -> Result<i32, result::DriverError> {
         unsafe { result::device::get_attribute(self.cu_device, attrib) }
     }
+
+    /// Get the name of this [CudaDevice].
+    pub fn name(&self) -> Result<String, result::DriverError> {
+        unsafe { result::device::get_name(self.cu_device)}.map(|name|{
+            let name_ptr = name.as_ptr();
+            unsafe { CStr::from_ptr(name_ptr).to_string_lossy().into_owned() }
+        })
+    }
+
 }
 
 impl Drop for CudaDevice {
